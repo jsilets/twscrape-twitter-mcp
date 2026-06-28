@@ -1,6 +1,6 @@
 [project]
 name = "twscrape-twitter-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "Read-optimized MCP server for Twitter/X, wrapping twscrape. BYO cookies, multi-account pool, agent-friendly tools."
 readme = "README.md"
 license = { text = "MIT" }
