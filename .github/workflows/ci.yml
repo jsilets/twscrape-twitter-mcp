@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly live smoke: catches the day twscrape's pin breaks against X.
+    - cron: "0 13 * * 1"
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: ruff check .
+      - run: pytest -q
+
+  live-smoke:
+    # Runs only when X session cookies are present as repo secrets. This is the
+    # tripwire for "X changed something and our pinned twscrape can no longer read."
+    runs-on: ubuntu-latest
+    needs: unit
+    if: ${{ github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+      - name: Seed session from secrets
+        env:
+          X_USERNAME: ${{ secrets.X_USERNAME }}
+          X_AUTH_TOKEN: ${{ secrets.X_AUTH_TOKEN }}
+          X_CT0: ${{ secrets.X_CT0 }}
+        run: |
+          if [ -z "$X_AUTH_TOKEN" ]; then
+            echo "No X_* secrets set, skipping live smoke."
+            exit 0
+          fi
+          twscrape-twitter-mcp init --username "$X_USERNAME" --auth-token "$X_AUTH_TOKEN" --ct0 "$X_CT0"
+          twscrape-twitter-mcp smoke

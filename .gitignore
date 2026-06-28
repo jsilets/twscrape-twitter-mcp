@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+
+# Local twscrape account pool / cookies, NEVER commit these
+*.db
+accounts.db
+cookies.json
+.env
+
+# OS
+.DS_Store

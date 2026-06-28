@@ -1,0 +1,30 @@
+# Fly.io deploy. Edit `app` to your name, then:
+#   fly launch --no-deploy        (or `fly apps create twscrape-twitter-mcp`)
+#   fly volumes create twscrape_twitter_mcp_data --size 1
+#   fly secrets set TWSCRAPE_TWITTER_MCP_AUTH_TOKEN=$(openssl rand -hex 32)
+#   fly deploy
+# Seed a session onto the volume after first deploy:
+#   fly ssh console -C "twscrape-twitter-mcp init --username YOU --auth-token ... --ct0 ..."
+
+app = "twscrape-twitter-mcp"
+primary_region = "iad"
+
+[build]
+
+[env]
+  TWSCRAPE_TWITTER_MCP_HOME = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[mounts]]
+  source = "twscrape_twitter_mcp_data"
+  destination = "/data"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

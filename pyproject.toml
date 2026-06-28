@@ -1,0 +1,55 @@
+[project]
+name = "twscrape-twitter-mcp"
+version = "0.1.0"
+description = "Read-optimized MCP server for Twitter/X, wrapping twscrape. BYO cookies, multi-account pool, agent-friendly tools."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Josh Silets" }]
+keywords = [
+  "mcp",
+  "model-context-protocol",
+  "twitter",
+  "x",
+  "twscrape",
+  "scraper",
+  "agent",
+]
+
+# twscrape is PINNED on purpose: it owns the brittle scraping layer
+# (GraphQL endpoints, x-client-transaction-id signing, TLS impersonation).
+# When X breaks it, bump this pin + let CI smoke-test confirm, then release.
+dependencies = [
+  "twscrape==0.19.0",
+  "fastmcp>=2.3.0",
+  "uvicorn>=0.30",
+  "websockets>=15",
+  # Drives the browser-based login flow (Mac/Linux/Windows). Bundled Chromium is
+  # fetched on first `twscrape-twitter-mcp login` via `playwright install chromium`.
+  "playwright>=1.45",
+]
+
+[project.optional-dependencies]
+# Stealthier login (undetected Chromium), used automatically if installed.
+stealth = ["patchright>=1.45"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/jsilets/twscrape-twitter-mcp"
+Issues = "https://github.com/jsilets/twscrape-twitter-mcp/issues"
+
+[project.scripts]
+twscrape-twitter-mcp = "twscrape_twitter_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/twscrape_twitter_mcp"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100

@@ -1,0 +1,14 @@
+{
+  "_comment": "Local stdio: Claude Code/Desktop launches and manages the process. Cookies stay on your machine.",
+  "mcpServers": {
+    "x": {
+      "command": "twscrape-twitter-mcp",
+      "args": ["serve", "--transport", "stdio"]
+    },
+    "_x_remote_example": {
+      "_comment": "Remote HTTP (Fly/Railway). Use an MCP host that supports HTTP transport + headers.",
+      "url": "https://YOUR-APP.fly.dev/mcp",
+      "headers": { "Authorization": "Bearer YOUR_TWSCRAPE_TWITTER_MCP_AUTH_TOKEN" }
+    }
+  }
+}
