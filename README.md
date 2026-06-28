@@ -225,9 +225,7 @@ The hard part of reading X — GraphQL signing, the `x-client-transaction-id`
 header, TLS fingerprinting — lives entirely in `twscrape`, which is pinned
 (`twscrape==0.19.0`). This package is a read-only MCP layer on top and never
 touches that machinery. When X changes something and reads break, the fix is a
-version bump, not reverse-engineering. A weekly GitHub Action runs the unit tests
-plus a live read (when `X_USERNAME` / `X_AUTH_TOKEN` / `X_CT0` repo secrets are
-set); a red run means the pin needs bumping.
+version bump, not reverse-engineering.
 
 ## Limits
 
