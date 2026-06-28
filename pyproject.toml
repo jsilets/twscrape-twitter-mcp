@@ -14,6 +14,22 @@ keywords = [
   "twscrape",
   "scraper",
   "agent",
+  "fastmcp",
+  "claude",
+  "codex",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Internet",
+  "Topic :: Software Development :: Libraries",
 ]
 
 # twscrape is PINNED on purpose: it owns the brittle scraping layer
@@ -36,6 +52,8 @@ dev = ["pytest>=8", "pytest-asyncio>=0.23", "ruff>=0.6"]
 
 [project.urls]
 Homepage = "https://github.com/jsilets/twscrape-twitter-mcp"
+Documentation = "https://github.com/jsilets/twscrape-twitter-mcp#readme"
+Repository = "https://github.com/jsilets/twscrape-twitter-mcp"
 Issues = "https://github.com/jsilets/twscrape-twitter-mcp/issues"
 
 [project.scripts]
