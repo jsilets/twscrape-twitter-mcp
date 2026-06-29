@@ -6,6 +6,7 @@ venv/
 dist/
 build/
 *.egg-info/
+uv.lock
 
 # Local twscrape account pool / cookies, NEVER commit these
 *.db
