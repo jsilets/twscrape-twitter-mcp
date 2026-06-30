@@ -1,6 +1,6 @@
 [project]
 name = "twscrape-twitter-mcp"
-version = "0.1.1"
+version = "0.1.2"
 description = "Read-optimized MCP server for Twitter/X, wrapping twscrape. BYO cookies, multi-account pool, agent-friendly tools."
 readme = "README.md"
 license = { text = "MIT" }
@@ -34,9 +34,11 @@ classifiers = [
 
 # twscrape is PINNED on purpose: it owns the brittle scraping layer
 # (GraphQL endpoints, x-client-transaction-id signing, TLS impersonation).
-# When X breaks it, bump this pin + let CI smoke-test confirm, then release.
+# When X breaks it, bump this pin, run the unit tests + `smoke` locally, then
+# release. See CONTRIBUTING.md ("Bumping twscrape") for the ritual; Dependabot
+# opens the bump PRs automatically.
 dependencies = [
-  "twscrape==0.19.0",
+  "twscrape==0.19.1",
   "fastmcp>=2.3.0",
   "uvicorn>=0.30",
   "websockets>=15",

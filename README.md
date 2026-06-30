@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.jsilets/twscrape-twitter-mcp -->
+
 # twscrape-twitter-mcp
 
 [![PyPI](https://img.shields.io/pypi/v/twscrape-twitter-mcp)](https://pypi.org/project/twscrape-twitter-mcp/)
