@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # The whole maintenance moat: twscrape ships X-compatibility fixes (often as
+  # patch releases) and we're pinned, so a release never reaches us until we
+  # bump. Dependabot opens that PR for us. Patch bumps are usually rubber-stamps
+  # after `smoke`; minors need a read of the "Breaking Changes" notes. See
+  # CONTRIBUTING.md -> "Bumping twscrape".
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+    commit-message:
+      prefix: deps
+
+  # Keep the CI / release workflow action pins current.
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: ci
