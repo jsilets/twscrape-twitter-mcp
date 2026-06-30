@@ -31,6 +31,7 @@ class Settings:
             _env("TWSCRAPE_TWITTER_MCP_DB") or str(self.config_dir / "accounts.db")
         )
         self.default_limit = int(_env("TWSCRAPE_TWITTER_MCP_DEFAULT_LIMIT") or "40")
+        self.xquik_api_key = _env("XQUIK_API_KEY") or None
 
         # When serving over HTTP, require this bearer token. Leave unset only for
         # stdio / trusted-private-network use.

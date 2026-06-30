@@ -7,7 +7,12 @@ gets a usable signal instead of a stack trace.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import re
+import urllib.error
+import urllib.parse
+import urllib.request
 from typing import Any
 
 from fastmcp import FastMCP
@@ -20,6 +25,7 @@ from .pool import get_api
 mcp = FastMCP("twscrape-twitter-mcp")
 
 _ID_RE = re.compile(r"(?:status(?:es)?/)(\d+)")
+_XQUIK_SEARCH_URL = "https://xquik.com/api/v1/x/tweets/search"
 
 
 def _parse_id(url_or_id: str) -> int:
@@ -68,6 +74,52 @@ def _conversation_id(tweet: Any, fallback: int) -> int:
             except (TypeError, ValueError):
                 pass
     return fallback
+
+
+def _xquik_tweet_to_md(tweet: dict[str, Any]) -> str:
+    author = tweet.get("author") if isinstance(tweet.get("author"), dict) else {}
+    username = str(author.get("userName") or author.get("username") or "?")
+    name = str(author.get("name") or username)
+    text = str(tweet.get("text") or "")
+    url = str(tweet.get("url") or f"https://x.com/{username}/status/{tweet.get('id', '')}")
+    created_at = str(tweet.get("createdAt") or "")
+    likes = int(tweet.get("likeCount") or 0)
+    reposts = int(tweet.get("retweetCount") or 0)
+    replies = int(tweet.get("replyCount") or 0)
+
+    parts = [f"### {name} (@{username})", text.strip(), url]
+    meta = f"likes={likes} reposts={reposts} replies={replies}"
+    if created_at:
+        meta = f"{meta} created={created_at}"
+    parts.append(meta)
+    return "\n".join(part for part in parts if part)
+
+
+def _fetch_xquik_search(query: str, limit: int, product: str) -> list[dict[str, Any]]:
+    if not settings.xquik_api_key:
+        raise RuntimeError("Set XQUIK_API_KEY to use xquik_search.")
+    params = urllib.parse.urlencode(
+        {
+            "q": query,
+            "queryType": product if product in {"Latest", "Top"} else "Latest",
+            "limit": str(max(1, min(limit or settings.default_limit, 200))),
+        }
+    )
+    request = urllib.request.Request(
+        f"{_XQUIK_SEARCH_URL}?{params}",
+        headers={"x-api-key": settings.xquik_api_key, "accept": "application/json"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=30) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", errors="replace")
+        raise RuntimeError(f"Xquik API {exc.code}: {body}") from exc
+
+    tweets = payload.get("tweets", [])
+    if not isinstance(tweets, list):
+        return []
+    return [tweet for tweet in tweets if isinstance(tweet, dict)]
 
 
 @mcp.tool
@@ -153,3 +205,18 @@ async def search(query: str, limit: int = 20, product: str = "Latest") -> str:
     if not res:
         return "No results."
     return joined(res)
+
+
+@mcp.tool
+async def xquik_search(query: str, limit: int = 20, product: str = "Latest") -> str:
+    """Search X through Xquik with XQUIK_API_KEY and return matching posts as markdown.
+
+    product: "Latest" | "Top". Existing twscrape-backed tools remain unchanged.
+    """
+    try:
+        tweets = await asyncio.to_thread(_fetch_xquik_search, query, limit, product)
+    except RuntimeError as exc:
+        return str(exc)
+    if not tweets:
+        return "No results."
+    return "\n\n".join(_xquik_tweet_to_md(tweet) for tweet in tweets)
