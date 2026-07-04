@@ -11,7 +11,8 @@
 An [MCP](https://modelcontextprotocol.io) server that reads X (Twitter): posts,
 threads, replies, quotes, and search. It wraps [twscrape](https://github.com/vladkens/twscrape)
 and uses your own logged-in session, so there's no paid X API and no developer
-account. Tools return clean markdown shaped for an agent to read.
+account. Tools return clean markdown shaped for an agent to read, including
+image, video, and GIF URLs and any external links in a post.
 
 Works with any MCP client over the two standard transports — local **stdio** and
 hosted **Streamable HTTP**.
