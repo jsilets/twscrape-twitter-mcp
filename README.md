@@ -11,7 +11,8 @@
 An [MCP](https://modelcontextprotocol.io) server that reads X (Twitter): posts,
 threads, replies, quotes, and search. It wraps [twscrape](https://github.com/vladkens/twscrape)
 and uses your own logged-in session, so there's no paid X API and no developer
-account. Tools return clean markdown shaped for an agent to read.
+account. Tools return clean markdown shaped for an agent to read, including
+image, video, and GIF URLs and any external links in a post.
 
 Works with any MCP client over the two standard transports — local **stdio** and
 hosted **Streamable HTTP**.
@@ -26,6 +27,7 @@ hosted **Streamable HTTP**.
 | `read_quotes(url_or_id, limit=30)` | Quote-tweets (best-effort, search-based). |
 | `user_timeline(username, limit=40, include_replies=False)` | A user's recent posts, newest first. Set `include_replies=True` to include replies. |
 | `search(query, limit=20, product="Latest")` | Search results. Supports `from:`, `has:media`, `min_faves:`, etc. |
+| `user_profile(username)` | A user's profile as markdown: bio, location, follower/following/tweet counts, join date. |
 
 ## Install
 

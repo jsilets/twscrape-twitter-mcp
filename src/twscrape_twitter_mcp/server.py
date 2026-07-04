@@ -14,7 +14,7 @@ from fastmcp import FastMCP
 from twscrape import gather
 
 from .config import settings
-from .formatters import joined, thread_to_md, tweet_to_md
+from .formatters import joined, thread_to_md, tweet_to_md, user_to_md
 from .pool import get_api
 
 mcp = FastMCP("twscrape-twitter-mcp")
@@ -102,6 +102,29 @@ async def read_tweet(url_or_id: str) -> str:
             "the session is rate-limited / logged out. Try `twscrape-twitter-mcp accounts` to check."
         )
     return tweet_to_md(t)
+
+
+@mcp.tool
+async def user_profile(username: str) -> str:
+    """Read an X user's profile by handle. Returns clean markdown.
+
+    Pass the handle with or without a leading @.
+    """
+    api = get_api()
+    handle = (username or "").strip().lstrip("@")
+    try:
+        user = await api.user_by_login(handle)
+    except Exception:
+        return (
+            "Could not read profile (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
+    if not user:
+        return (
+            "User not found or not accessible (may be suspended, protected, or the "
+            "session is rate-limited / logged out)."
+        )
+    return user_to_md(user)
 
 
 @mcp.tool

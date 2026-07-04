@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import timezone
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 
 def _fmt_date(d: Any) -> str:
@@ -41,6 +42,90 @@ def _handle(t: Any) -> str:
     return getattr(getattr(t, "user", None), "username", None) or "unknown"
 
 
+def _humanize_ms(ms: Any) -> str:
+    """Milliseconds -> M:SS, or '' if not a usable number."""
+    try:
+        total = int(ms) // 1000
+    except (TypeError, ValueError):
+        return ""
+    if total < 0:
+        return ""
+    return f"{total // 60}:{total % 60:02d}"
+
+
+def _best_variant_url(video: Any) -> str:
+    """Pick the highest-bitrate mp4 variant, else any variant with a url."""
+    variants = getattr(video, "variants", None) or []
+    best = None
+    best_bitrate = -1
+    fallback = ""
+    for v in variants:
+        url = getattr(v, "url", None)
+        if not url:
+            continue
+        if not fallback:
+            fallback = url
+        if getattr(v, "contentType", None) == "video/mp4":
+            bitrate = getattr(v, "bitrate", 0) or 0
+            if bitrate > best_bitrate:
+                best_bitrate = bitrate
+                best = url
+    return best or fallback
+
+
+def _media_lines(t: Any) -> list[str]:
+    media = getattr(t, "media", None)
+    if not media:
+        return []
+    bullets: list[str] = []
+    for photo in getattr(media, "photos", None) or []:
+        url = getattr(photo, "url", None)
+        if url:
+            bullets.append(f"- Image: {url}")
+    for video in getattr(media, "videos", None) or []:
+        url = _best_variant_url(video)
+        if not url:
+            continue
+        dur = _humanize_ms(getattr(video, "duration", None))
+        label = f"Video ({dur})" if dur else "Video"
+        bullets.append(f"- {label}: {url}")
+    for gif in getattr(media, "animated", None) or []:
+        url = getattr(gif, "videoUrl", None)
+        if url:
+            bullets.append(f"- GIF: {url}")
+    if not bullets:
+        return []
+    return ["", "**Media:**", *bullets]
+
+
+def _link_lines(t: Any) -> list[str]:
+    links = getattr(t, "links", None)
+    if not links:
+        return []
+    bullets: list[str] = []
+    for link in links:
+        url = getattr(link, "url", None)
+        if not url:
+            continue
+        host = (urlparse(url).hostname or "").lower()
+        is_twitter = (
+            host in ("x.com", "twitter.com")
+            or host.endswith(".x.com")
+            or host.endswith(".twitter.com")
+        )
+        is_media_host = "pic.twitter.com" in host or "pbs.twimg.com" in host
+        if (is_twitter and "/status/" in url.lower()) or is_media_host:
+            continue
+        text = (getattr(link, "text", None) or "").strip()
+        if text and text != url:
+            bullets.append(f"- [{text}]({url})")
+        else:
+            bullets.append(f"- {url}")
+    if not bullets:
+        return []
+    return ["", "**Links:**", *bullets]
+
+
 def tweet_to_md(t: Any, *, heading_level: int = 0) -> str:
     """Render one tweet as a markdown block."""
     user = getattr(t, "user", None)
@@ -56,6 +141,8 @@ def tweet_to_md(t: Any, *, heading_level: int = 0) -> str:
         byline += f" · {date}"
 
     lines = [byline, "", text.strip()]
+    lines += _media_lines(t)
+    lines += _link_lines(t)
 
     quoted = getattr(t, "quotedTweet", None)
     if quoted:
@@ -65,6 +152,56 @@ def tweet_to_md(t: Any, *, heading_level: int = 0) -> str:
     meta = " · ".join(x for x in (_stats(t), url) if x)
     if meta:
         lines += ["", f"_{meta}_"]
+
+    return "\n".join(lines).strip()
+
+
+def _profile_stats(u: Any) -> str:
+    pairs = (
+        ("followers", "followersCount"),
+        ("following", "friendsCount"),
+        ("tweets", "statusesCount"),
+    )
+    parts = []
+    for label, attr in pairs:
+        v = getattr(u, attr, None)
+        if v is not None:
+            parts.append(f"{v:,} {label}")
+    return " · ".join(parts)
+
+
+def user_to_md(u: Any) -> str:
+    """Render an X user's profile as a markdown block."""
+    handle = getattr(u, "username", None) or "unknown"
+    name = getattr(u, "displayname", None) or handle
+
+    byline = f"**{name}** (@{handle})"
+    if getattr(u, "verified", None) or getattr(u, "blue", None):
+        byline += " · ✓"
+
+    lines = [byline]
+
+    bio = getattr(u, "rawDescription", None)
+    if bio:
+        lines += ["", bio.strip()]
+
+    meta = []
+    location = getattr(u, "location", None)
+    if location:
+        meta.append(f"📍 {location}")
+    joined_date = _fmt_date(getattr(u, "created", None))
+    if joined_date:
+        meta.append(f"joined {joined_date}")
+    if meta:
+        lines += ["", " · ".join(meta)]
+
+    stats = _profile_stats(u)
+    if stats:
+        lines += ["", f"_{stats}_"]
+
+    url = getattr(u, "url", None)
+    if url:
+        lines += ["", url]
 
     return "\n".join(lines).strip()
 
