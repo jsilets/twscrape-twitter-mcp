@@ -160,14 +160,26 @@ async def user_timeline(
     api = get_api()
     limit = limit or settings.default_limit
     handle = _normalize_handle(username)
-    user = await api.user_by_login(handle)
+    try:
+        user = await api.user_by_login(handle)
+    except Exception:
+        return (
+            "Could not read timeline (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
     if not user:
         return (
             "User not found or not accessible (may be suspended, protected, or the "
             "session is rate-limited / logged out)."
         )
     gen = api.user_tweets_and_replies if include_replies else api.user_tweets
-    res = await gather(gen(user.id, limit=limit))
+    try:
+        res = await gather(gen(user.id, limit=limit))
+    except Exception:
+        return (
+            "Could not read timeline (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
     if not res:
         return "No posts found (or none accessible)."
     return joined(_sorted_by_date(res)[::-1])
