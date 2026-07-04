@@ -15,6 +15,12 @@ semantic-ish versioning while in `0.x`.
 - `user_timeline(username, limit=40, include_replies=False)` tool: a user's
   recent posts as markdown, newest first, with an option to include replies.
 
+### Changed
+- Every tool now returns a plain explanatory string on any failure (bad input,
+  rate-limit, expired session, no account available, network) instead of raising.
+  Previously only the "not found" case was handled; a raised twscrape error would
+  surface to the agent as an opaque protocol error.
+
 ## [0.1.2]
 
 ### Changed
