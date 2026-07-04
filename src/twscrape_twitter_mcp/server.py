@@ -104,7 +104,13 @@ async def user_profile(username: str) -> str:
     """
     api = get_api()
     handle = (username or "").strip().lstrip("@")
-    user = await api.user_by_login(handle)
+    try:
+        user = await api.user_by_login(handle)
+    except Exception:
+        return (
+            "Could not read profile (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
     if not user:
         return (
             "User not found or not accessible (may be suspended, protected, or the "
