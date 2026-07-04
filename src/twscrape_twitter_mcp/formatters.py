@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from datetime import timezone
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 
 def _fmt_date(d: Any) -> str:
@@ -106,8 +107,14 @@ def _link_lines(t: Any) -> list[str]:
         url = getattr(link, "url", None)
         if not url:
             continue
-        low = url.lower()
-        if "/status/" in low or "pic.twitter.com" in low or "pbs.twimg.com" in low:
+        host = (urlparse(url).hostname or "").lower()
+        is_twitter = (
+            host in ("x.com", "twitter.com")
+            or host.endswith(".x.com")
+            or host.endswith(".twitter.com")
+        )
+        is_media_host = "pic.twitter.com" in host or "pbs.twimg.com" in host
+        if (is_twitter and "/status/" in url.lower()) or is_media_host:
             continue
         text = (getattr(link, "text", None) or "").strip()
         if text and text != url:

@@ -139,6 +139,18 @@ def test_links_render_and_filter_self_and_media_links():
     assert "pbs.twimg.com" not in md
 
 
+def test_non_twitter_status_link_is_kept():
+    links = [
+        SimpleNamespace(
+            url="https://example.com/status/incident",
+            text="Incident status",
+            tcourl="https://t.co/xyz",
+        ),
+    ]
+    md = tweet_to_md(_tweet(1, "alice", "outage update", links=links))
+    assert "- [Incident status](https://example.com/status/incident)" in md
+
+
 def test_bare_link_when_text_is_empty_or_equals_url():
     links = [SimpleNamespace(url="https://example.com", text="", tcourl="https://t.co/x")]
     md = tweet_to_md(_tweet(1, "alice", "x", links=links))
