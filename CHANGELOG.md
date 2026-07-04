@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [Unreleased]
+
+### Added
+- Tweet output now renders attached media (image, video, and GIF URLs, with the
+  highest-quality video variant and humanized duration) and external links.
+  Agents previously lost these entirely.
+
 ## [0.1.2]
 
 ### Changed
