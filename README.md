@@ -26,6 +26,7 @@ hosted **Streamable HTTP**.
 | `read_replies(url_or_id, limit=50)` | Replies to a post. |
 | `read_quotes(url_or_id, limit=30)` | Quote-tweets (best-effort, search-based). |
 | `search(query, limit=20, product="Latest")` | Search results. Supports `from:`, `has:media`, `min_faves:`, etc. |
+| `user_profile(username)` | A user's profile as markdown: bio, location, follower/following/tweet counts, join date. |
 
 ## Install
 
