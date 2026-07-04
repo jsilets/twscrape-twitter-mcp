@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [Unreleased]
+
+### Added
+- `user_profile(username)` tool: reads a user's profile by handle and returns it
+  as markdown (bio, location, follower/following/tweet counts, join date, url).
+
 ## [0.1.2]
 
 ### Changed

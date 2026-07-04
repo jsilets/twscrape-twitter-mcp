@@ -69,6 +69,56 @@ def tweet_to_md(t: Any, *, heading_level: int = 0) -> str:
     return "\n".join(lines).strip()
 
 
+def _profile_stats(u: Any) -> str:
+    pairs = (
+        ("followers", "followersCount"),
+        ("following", "friendsCount"),
+        ("tweets", "statusesCount"),
+    )
+    parts = []
+    for label, attr in pairs:
+        v = getattr(u, attr, None)
+        if v is not None:
+            parts.append(f"{v:,} {label}")
+    return " · ".join(parts)
+
+
+def user_to_md(u: Any) -> str:
+    """Render an X user's profile as a markdown block."""
+    handle = getattr(u, "username", None) or "unknown"
+    name = getattr(u, "displayname", None) or handle
+
+    byline = f"**{name}** (@{handle})"
+    if getattr(u, "verified", None) or getattr(u, "blue", None):
+        byline += " · ✓"
+
+    lines = [byline]
+
+    bio = getattr(u, "rawDescription", None)
+    if bio:
+        lines += ["", bio.strip()]
+
+    meta = []
+    location = getattr(u, "location", None)
+    if location:
+        meta.append(f"📍 {location}")
+    joined_date = _fmt_date(getattr(u, "created", None))
+    if joined_date:
+        meta.append(f"joined {joined_date}")
+    if meta:
+        lines += ["", " · ".join(meta)]
+
+    stats = _profile_stats(u)
+    if stats:
+        lines += ["", f"_{stats}_"]
+
+    url = getattr(u, "url", None)
+    if url:
+        lines += ["", url]
+
+    return "\n".join(lines).strip()
+
+
 def thread_to_md(root: Any, replies: Iterable[Any]) -> str:
     """Render a conversation: root post, the author's self-thread, then replies."""
     replies = list(replies or [])
