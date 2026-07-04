@@ -10,6 +10,8 @@ semantic-ish versioning while in `0.x`.
 - Tweet output now renders attached media (image, video, and GIF URLs, with the
   highest-quality video variant and humanized duration) and external links.
   Agents previously lost these entirely.
+- `user_profile(username)` tool: reads a user's profile by handle and returns it
+  as markdown (bio, location, follower/following/tweet counts, join date, url).
 
 ## [0.1.2]
 
