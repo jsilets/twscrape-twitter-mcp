@@ -22,6 +22,14 @@ mcp = FastMCP("twscrape-twitter-mcp")
 _ID_RE = re.compile(r"(?:status(?:es)?/)(\d+)")
 
 
+def _normalize_handle(username: str) -> str:
+    """Strip surrounding whitespace and a single leading @ from a handle."""
+    s = (username or "").strip()
+    if s.startswith("@"):
+        s = s[1:]
+    return s
+
+
 def _parse_id(url_or_id: str) -> int:
     s = (url_or_id or "").strip()
     if s.isdigit():
@@ -161,6 +169,43 @@ async def read_quotes(url_or_id: str, limit: int = 30) -> str:
     if not res:
         return "No quote tweets found (search-based; results may be incomplete)."
     return joined(res)
+
+
+@mcp.tool
+async def user_timeline(
+    username: str, limit: int = 40, include_replies: bool = False
+) -> str:
+    """Read a user's recent posts as markdown, newest first.
+
+    Pass the handle with or without a leading @. Set include_replies=True to
+    include the user's replies alongside their standalone posts.
+    """
+    api = get_api()
+    limit = limit or settings.default_limit
+    handle = _normalize_handle(username)
+    try:
+        user = await api.user_by_login(handle)
+    except Exception:
+        return (
+            "Could not read timeline (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
+    if not user:
+        return (
+            "User not found or not accessible (may be suspended, protected, or the "
+            "session is rate-limited / logged out)."
+        )
+    gen = api.user_tweets_and_replies if include_replies else api.user_tweets
+    try:
+        res = await gather(gen(user.id, limit=limit))
+    except Exception:
+        return (
+            "Could not read timeline (session is rate-limited, logged out, or no "
+            "account is available)."
+        )
+    if not res:
+        return "No posts found (or none accessible)."
+    return joined(_sorted_by_date(res)[::-1])
 
 
 @mcp.tool

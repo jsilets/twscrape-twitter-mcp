@@ -12,6 +12,8 @@ semantic-ish versioning while in `0.x`.
   Agents previously lost these entirely.
 - `user_profile(username)` tool: reads a user's profile by handle and returns it
   as markdown (bio, location, follower/following/tweet counts, join date, url).
+- `user_timeline(username, limit=40, include_replies=False)` tool: a user's
+  recent posts as markdown, newest first, with an option to include replies.
 
 ## [0.1.2]
 
