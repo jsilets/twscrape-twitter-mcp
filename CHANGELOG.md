@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [Unreleased]
+
+### Added
+- `user_timeline(username, limit=40, include_replies=False)` tool: a user's
+  recent posts as markdown, newest first, with an option to include replies.
+
 ## [0.1.2]
 
 ### Changed
