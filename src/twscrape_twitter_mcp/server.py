@@ -1,14 +1,16 @@
 """FastMCP server: read-optimized tools shaped for "an agent reads this".
 
-The tools return clean markdown, not raw GraphQL pages. Each tool degrades to a
-plain explanatory string on miss/rate-limit rather than raising, so the agent
-gets a usable signal instead of a stack trace.
+The tools return clean markdown, not raw GraphQL pages. Every tool is wrapped by
+`_guard`, which turns any failure (bad input, rate-limit, expired session, no
+account available, network error) into a plain explanatory string. That keeps the
+MCP contract: the agent gets a usable signal instead of an opaque protocol error.
 """
 
 from __future__ import annotations
 
+import functools
 import re
-from typing import Any
+from typing import Any, Awaitable, Callable
 
 from fastmcp import FastMCP
 from twscrape import gather
@@ -20,6 +22,30 @@ from .pool import get_api
 mcp = FastMCP("twscrape-twitter-mcp")
 
 _ID_RE = re.compile(r"(?:status(?:es)?/)(\d+)")
+
+
+def _guard(fn: Callable[..., Awaitable[str]]) -> Callable[..., Awaitable[str]]:
+    """Wrap a tool so it always returns a string and never raises.
+
+    twscrape raises on operational failures (no account available, rate-limit,
+    expired session, network), and bad input raises ValueError from `_parse_id`.
+    A raised exception would reach the agent as an opaque error, so every tool
+    funnels through here and degrades to readable markdown instead.
+    """
+
+    @functools.wraps(fn)
+    async def wrapper(*args: Any, **kwargs: Any) -> str:
+        try:
+            return await fn(*args, **kwargs)
+        except ValueError as e:
+            return f"Invalid input: {e}"
+        except Exception:
+            return (
+                "The request could not be completed. The session may be rate-limited, "
+                "logged out, or no account is available. Try `twscrape-twitter-mcp accounts`."
+            )
+
+    return wrapper
 
 
 def _normalize_handle(username: str) -> str:
@@ -79,6 +105,7 @@ def _conversation_id(tweet: Any, fallback: int) -> int:
 
 
 @mcp.tool
+@_guard
 async def login() -> str:
     """Capture an existing signed-in browser session via CDP.
 
@@ -92,6 +119,7 @@ async def login() -> str:
 
 
 @mcp.tool
+@_guard
 async def read_tweet(url_or_id: str) -> str:
     """Read a single X post by URL or numeric id. Returns clean markdown."""
     api = get_api()
@@ -105,20 +133,15 @@ async def read_tweet(url_or_id: str) -> str:
 
 
 @mcp.tool
+@_guard
 async def user_profile(username: str) -> str:
     """Read an X user's profile by handle. Returns clean markdown.
 
     Pass the handle with or without a leading @.
     """
     api = get_api()
-    handle = (username or "").strip().lstrip("@")
-    try:
-        user = await api.user_by_login(handle)
-    except Exception:
-        return (
-            "Could not read profile (session is rate-limited, logged out, or no "
-            "account is available)."
-        )
+    handle = _normalize_handle(username)
+    user = await api.user_by_login(handle)
     if not user:
         return (
             "User not found or not accessible (may be suspended, protected, or the "
@@ -128,6 +151,7 @@ async def user_profile(username: str) -> str:
 
 
 @mcp.tool
+@_guard
 async def read_thread(
     url_or_id: str, max_replies: int = 50, include_replies: bool = True
 ) -> str:
@@ -148,6 +172,7 @@ async def read_thread(
 
 
 @mcp.tool
+@_guard
 async def read_replies(url_or_id: str, limit: int = 50) -> str:
     """Read the replies to an X post as markdown."""
     api = get_api()
@@ -158,6 +183,7 @@ async def read_replies(url_or_id: str, limit: int = 50) -> str:
 
 
 @mcp.tool
+@_guard
 async def read_quotes(url_or_id: str, limit: int = 30) -> str:
     """Read quote-tweets of an X post (best-effort, via search:quoted_tweet_id).
     Coverage is partial, X does not expose a complete quotes endpoint."""
@@ -172,6 +198,7 @@ async def read_quotes(url_or_id: str, limit: int = 30) -> str:
 
 
 @mcp.tool
+@_guard
 async def user_timeline(
     username: str, limit: int = 40, include_replies: bool = False
 ) -> str:
@@ -183,32 +210,21 @@ async def user_timeline(
     api = get_api()
     limit = limit or settings.default_limit
     handle = _normalize_handle(username)
-    try:
-        user = await api.user_by_login(handle)
-    except Exception:
-        return (
-            "Could not read timeline (session is rate-limited, logged out, or no "
-            "account is available)."
-        )
+    user = await api.user_by_login(handle)
     if not user:
         return (
             "User not found or not accessible (may be suspended, protected, or the "
             "session is rate-limited / logged out)."
         )
     gen = api.user_tweets_and_replies if include_replies else api.user_tweets
-    try:
-        res = await gather(gen(user.id, limit=limit))
-    except Exception:
-        return (
-            "Could not read timeline (session is rate-limited, logged out, or no "
-            "account is available)."
-        )
+    res = await gather(gen(user.id, limit=limit))
     if not res:
         return "No posts found (or none accessible)."
     return joined(_sorted_by_date(res)[::-1])
 
 
 @mcp.tool
+@_guard
 async def search(query: str, limit: int = 20, product: str = "Latest") -> str:
     """Search X and return matching posts as markdown.
 
