@@ -14,5 +14,10 @@ accounts.db
 cookies.json
 .env
 
+# Agent instructions and local state
+.claude/
+CLAUDE.md
+AGENTS.md
+
 # OS
 .DS_Store
