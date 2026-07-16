@@ -23,6 +23,8 @@ def get_api() -> "API":
     if _api is None:
         settings.ensure_dirs()
         _api = API(str(settings.db_path))
+        if settings.db_path.exists():
+            settings.restrict_secret_file(settings.db_path)
     return _api
 
 

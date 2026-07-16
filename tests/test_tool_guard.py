@@ -1,4 +1,4 @@
-"""The _guard decorator: tools return a string, never raise. Imports server."""
+"""The _guard decorator: tools return readable MCP errors, never raise."""
 
 import asyncio
 import inspect
@@ -16,27 +16,26 @@ def test_guard_passes_through_return_value():
     assert asyncio.run(ok("hi")) == "got hi"
 
 
-def test_guard_turns_value_error_into_string():
+def test_guard_turns_value_error_into_mcp_error():
     @server._guard
     async def boom():
         raise ValueError("bad id")
 
     out = asyncio.run(boom())
-    assert isinstance(out, str)
-    assert "Invalid input" in out
-    assert "bad id" in out
+    assert out.is_error is True
+    assert out.content[0].text == "Invalid input: bad id"
 
 
-def test_guard_turns_any_exception_into_string():
+def test_guard_turns_any_exception_into_masked_mcp_error():
     @server._guard
     async def boom():
         raise RuntimeError("no account available")
 
     out = asyncio.run(boom())
-    assert isinstance(out, str)
-    assert "could not be completed" in out
+    assert out.is_error is True
+    assert "could not be completed" in out.content[0].text
     # The raw exception text must not leak to the agent.
-    assert "no account available" not in out
+    assert "no account available" not in out.content[0].text
 
 
 def test_guard_preserves_name_and_signature():

@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import getpass
+import hmac
 import sys
 
 from .config import settings
@@ -93,7 +94,7 @@ def _cmd_login(args: argparse.Namespace) -> int:
     if args.fresh_browser:
         print(
             "Opening an automated login browser. This is a fallback and may be "
-            "blocked by X; prefer `twscrape-twitter-mcp login --attach`.",
+            "blocked by X; prefer `twscrape-twitter-mcp login --launch-browser chrome`.",
             file=sys.stderr,
         )
         try:
@@ -102,7 +103,9 @@ def _cmd_login(args: argparse.Namespace) -> int:
             print(str(e), file=sys.stderr)
             return 1
     else:
-        if args.launch_browser:
+        if args.attach:
+            attach = attach_session(args.cdp_url)
+        elif args.launch_browser:
             try:
                 launch_managed_browser(args.launch_browser, args.cdp_url)
                 wait_for_cdp(args.cdp_url)
@@ -115,8 +118,6 @@ def _cmd_login(args: argparse.Namespace) -> int:
                 file=sys.stderr,
             )
             attach = wait_for_attached_session(args.cdp_url)
-        else:
-            attach = attach_session(args.cdp_url)
         try:
             cmap = asyncio.run(attach)
         except Exception as e:
@@ -159,17 +160,25 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
         class _TokenAuth(BaseHTTPMiddleware):
             async def dispatch(self, request, call_next):
-                if request.headers.get("authorization", "") != f"Bearer {token}":
-                    return JSONResponse({"error": "unauthorized"}, status_code=401)
+                provided = request.headers.get("authorization", "")
+                if not hmac.compare_digest(provided, f"Bearer {token}"):
+                    return JSONResponse(
+                        {"error": "unauthorized"},
+                        status_code=401,
+                        headers={"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"},
+                    )
                 return await call_next(request)
 
         app.add_middleware(_TokenAuth)
-    else:
+    elif host not in {"127.0.0.1", "::1", "localhost"}:
         print(
-            "WARNING: serving HTTP without TWSCRAPE_TWITTER_MCP_AUTH_TOKEN. Anyone who can reach "
-            f"http://{host}:{port}/mcp can use your X session. Set a token.",
+            "Refusing to expose HTTP without TWSCRAPE_TWITTER_MCP_AUTH_TOKEN. "
+            "Use a token or bind to localhost.",
             file=sys.stderr,
         )
+        return 2
+    else:
+        print("WARNING: serving HTTP without auth on localhost only.", file=sys.stderr)
 
     import uvicorn
 
@@ -179,19 +188,29 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="twscrape-twitter-mcp", description="Read-optimized X (Twitter) MCP server.")
-    sub = p.add_subparsers(dest="cmd", required=True)
+    sub = p.add_subparsers(dest="cmd")
+    p.set_defaults(
+        func=_cmd_serve,
+        transport="stdio",
+        host="127.0.0.1",
+        port=0,
+        no_auto_login=False,
+    )
 
     pl = sub.add_parser("login", help="Capture an existing signed-in X browser session.")
     login_mode = pl.add_mutually_exclusive_group()
     login_mode.add_argument(
         "--attach",
         action="store_true",
-        help="Attach to a browser DevTools endpoint. This is the default.",
+        help="Attach to an isolated browser DevTools endpoint.",
     )
-    pl.add_argument(
+    login_mode.add_argument(
         "--launch-browser",
+        nargs="?",
+        const="chrome",
+        default="chrome",
         choices=["chrome", "brave"],
-        help="Launch a dedicated browser profile with CDP enabled, then attach.",
+        help="Launch a dedicated browser profile with CDP enabled, then attach (default: chrome).",
     )
     pl.add_argument(
         "--cdp-url",

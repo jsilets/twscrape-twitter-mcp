@@ -31,6 +31,7 @@ MAC_BROWSER_PATHS = {
     "chrome": "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     "brave": "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
 }
+_X_COOKIE_DOMAINS = ("x.com", "twitter.com")
 
 
 def storage_state_path() -> Path:
@@ -99,9 +100,24 @@ def _extract_creds(cookies: list[dict[str, Any]]) -> dict[str, str] | None:
     return None
 
 
+def _x_cookies(cookies: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep only X cookies when copying a browser session through CDP.
+
+    Storage.getCookies returns every cookie in the attached browser, not merely
+    the cookies for the page that prompted the login. Persisting that complete
+    result would turn a convenient X login into a copy of unrelated web sessions.
+    """
+    result = []
+    for cookie in cookies:
+        domain = str(cookie.get("domain") or "").lstrip(".").lower()
+        if any(domain == allowed or domain.endswith(f".{allowed}") for allowed in _X_COOKIE_DOMAINS):
+            result.append(cookie)
+    return result
+
+
 def _storage_state(cookies: list[dict[str, Any]]) -> dict[str, Any]:
     """Return the small subset of Playwright storage-state shape we need."""
-    return {"cookies": cookies, "origins": []}
+    return {"cookies": _x_cookies(cookies), "origins": []}
 
 
 def _cdp_json(cdp_url: str, path: str) -> dict[str, Any]:
@@ -243,6 +259,7 @@ async def attach_session(cdp_url: str | None = None) -> dict[str, str]:
     creds = _extract_creds(cookies)
     if creds:
         storage.write_text(json.dumps(_storage_state(cookies), indent=2))
+        settings.restrict_secret_file(storage)
         return creds
 
     raise RuntimeError(
@@ -304,7 +321,9 @@ async def interactive_login(timeout_s: int = 300, headed: bool = True) -> dict[s
                 await page.wait_for_timeout(1000)
 
             if creds:
-                await context.storage_state(path=str(storage))
+                cookies = await context.cookies()
+                storage.write_text(json.dumps(_storage_state(cookies), indent=2))
+                settings.restrict_secret_file(storage)
             await browser.close()
 
             if not creds:
@@ -369,7 +388,7 @@ async def ensure_session(open_browser: bool = True, force: bool = False) -> bool
     if not open_browser:
         print(
             "No X session available.\n"
-            "Authenticate locally with `twscrape-twitter-mcp login --attach`, then ship the resulting\n"
+            "Authenticate locally with `twscrape-twitter-mcp login --launch-browser chrome`, then ship the resulting\n"
             f"{storage_state_path()} (or its cookies) to this host.",
             file=sys.stderr,
         )

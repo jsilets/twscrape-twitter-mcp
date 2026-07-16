@@ -7,7 +7,7 @@ Read-only by design. PRs are judged against this:
 - No tools that write to X (post, reply, like, follow, DM).
 - No paid or third-party backends in core. Reads go through twscrape and your own session. Open an issue first if you think a case is exceptional.
 - twscrape stays the engine. No alternative scraping backends.
-- Tools return markdown, and return a plain string on miss/rate-limit instead of raising.
+- Tools return markdown and never raise into the MCP transport. A miss is a plain string; an operational failure (rate-limit, expired session, bad input) is a readable `ToolResult` with `is_error=True` via `_guard`.
 
 ## Setup
 

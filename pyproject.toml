@@ -1,6 +1,6 @@
 [project]
 name = "twscrape-twitter-mcp"
-version = "0.1.2"
+version = "0.1.3"
 description = "Read-optimized MCP server for Twitter/X, wrapping twscrape. BYO cookies, multi-account pool, agent-friendly tools."
 readme = "README.md"
 license = { text = "MIT" }
@@ -39,7 +39,7 @@ classifiers = [
 # opens the bump PRs automatically.
 dependencies = [
   "twscrape==0.19.1",
-  "fastmcp>=2.3.0",
+  "fastmcp>=3.4.2,<4",
   "uvicorn>=0.30",
   "websockets>=15",
   # Drives the browser-based login flow (Mac/Linux/Windows). Bundled Chromium is

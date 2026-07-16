@@ -53,26 +53,28 @@ It does not touch your daily browser or automate X's login flow.
 twscrape-twitter-mcp login --launch-browser chrome   # or: brave
 ```
 
-**2. Attach to a browser you already have open.** Start your browser with a debug
-port, then attach:
+**2. Attach to a dedicated browser profile.** Only use this when you already run
+an isolated Chromium profile with a debug port. Browser debugging exposes browser
+data, and recent Chrome versions do not enable it for the default profile.
 
 ```bash
 # macOS
-"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --remote-debugging-port=9222
-# Linux:   google-chrome --remote-debugging-port=9222
-# Windows: "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222
+"/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --remote-debugging-port=9222 --user-data-dir=/tmp/x-mcp-browser
+# Linux:   google-chrome --remote-debugging-port=9222 --user-data-dir=/tmp/x-mcp-browser
+# Windows: "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 --user-data-dir=%TEMP%\x-mcp-browser
 
 twscrape-twitter-mcp login --attach                  # add --cdp-url for a non-default port
 ```
 
 **3. Headless / CI (raw cookies).** A server can't open your desktop browser, so
-add a session from `auth_token` + `ct0` cookies:
+add a session from `auth_token` + `ct0` cookies. Run this without cookie flags to
+enter values through hidden prompts, rather than leaving secrets in shell history:
 
 ```bash
-twscrape-twitter-mcp init --username YOU --auth-token AUTH --ct0 CT0
+twscrape-twitter-mcp init
 ```
 
-The captured session is reused across restarts. Run `login` again when it expires,
+The captured session is reused across restarts. Run `login --launch-browser chrome` again when it expires,
 or to add burner sessions for rate-limit rotation. `twscrape-twitter-mcp accounts`
 lists the pool.
 
@@ -153,8 +155,9 @@ args = ["serve", "--transport", "stdio"]
 <details>
 <summary><b>Remote (Streamable HTTP)</b></summary>
 
-For a hosted instance (see [Deploy](#deploy)), point your client at the HTTP
-endpoint with a bearer token:
+For a hosted private instance (see [Deploy](#deploy)), point a preconfigured
+client at the HTTP endpoint with a bearer token. This is static bearer auth, not
+an OAuth sign-in flow.
 
 ```json
 {
@@ -197,8 +200,8 @@ fly launch --no-deploy
 fly volumes create twscrape_twitter_mcp_data --size 1
 fly secrets set TWSCRAPE_TWITTER_MCP_AUTH_TOKEN=$(openssl rand -hex 32)
 fly deploy
-# seed a session onto the volume:
-fly ssh console -C "twscrape-twitter-mcp init --username YOU --auth-token AUTH --ct0 CT0"
+# seed a session onto the volume through hidden prompts:
+fly ssh console -C "twscrape-twitter-mcp init"
 ```
 </details>
 
@@ -221,14 +224,14 @@ Clients send `Authorization: Bearer <token>`.
 | `TWSCRAPE_TWITTER_MCP_AUTH_TOKEN` | _(unset)_ | Required bearer token for HTTP transport. |
 | `TWSCRAPE_TWITTER_MCP_PROXY` | _(unset)_ | Global proxy for every account. |
 | `TWSCRAPE_TWITTER_MCP_CDP_URL` | `http://127.0.0.1:9222` | Browser DevTools endpoint for `login --attach`. |
-| `TWSCRAPE_TWITTER_MCP_DEFAULT_LIMIT` | `40` | Default result count. |
+| `TWSCRAPE_TWITTER_MCP_DEFAULT_LIMIT` | `40` | Default timeline and search result count (1–100). |
 | `PORT` | `8080` | HTTP port (Railway injects this). |
 
 ## How it works
 
 The hard part of reading X — GraphQL signing, the `x-client-transaction-id`
-header, TLS fingerprinting — lives entirely in `twscrape`, which is pinned
-(`twscrape==0.19.0`). This package is a read-only MCP layer on top and never
+header, TLS fingerprinting — lives entirely in `twscrape`, which is pinned.
+This package is a read-only MCP layer on top and never
 touches that machinery. When X changes something and reads break, the fix is a
 version bump, not reverse-engineering.
 
