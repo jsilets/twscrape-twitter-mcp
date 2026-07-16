@@ -31,6 +31,8 @@ class Settings:
             _env("TWSCRAPE_TWITTER_MCP_DB") or str(self.config_dir / "accounts.db")
         )
         self.default_limit = int(_env("TWSCRAPE_TWITTER_MCP_DEFAULT_LIMIT") or "40")
+        if not 1 <= self.default_limit <= 100:
+            raise ValueError("TWSCRAPE_TWITTER_MCP_DEFAULT_LIMIT must be between 1 and 100")
 
         # When serving over HTTP, require this bearer token. Leave unset only for
         # stdio / trusted-private-network use.
@@ -46,8 +48,21 @@ class Settings:
         self.port = int(os.environ.get("PORT", "8080"))
 
     def ensure_dirs(self) -> None:
-        self.config_dir.mkdir(parents=True, exist_ok=True)
+        self.config_dir.mkdir(parents=True, exist_ok=True, mode=0o700)
+        try:
+            self.config_dir.chmod(0o700)
+        except OSError:
+            # Best effort for filesystems that do not expose POSIX permissions.
+            pass
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def restrict_secret_file(self, path: Path) -> None:
+        """Keep persisted X session material readable only by its owner."""
+        try:
+            path.chmod(0o600)
+        except OSError:
+            # Best effort for filesystems that do not expose POSIX permissions.
+            pass
 
 
 settings = Settings()
