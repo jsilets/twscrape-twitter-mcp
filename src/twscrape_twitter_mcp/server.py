@@ -124,7 +124,11 @@ def _conversation_id(tweet: Any, fallback: int) -> int:
 async def auth_status() -> str:
     """Check whether this server has an active X session, without exposing cookies."""
     rows = await list_accounts()
-    active = sum(bool(row["active"] and row["logged_in"]) for row in rows)
+    # Count `active` only. twscrape's `logged_in` flag tracks its password login
+    # flow; BYO-cookie sessions stay logged_in=False yet read fine, and the pool
+    # dispatches reads on `active`. Gating on logged_in reported a live session as
+    # "no session" (matches has_active_session, which also checks active alone).
+    active = sum(1 for row in rows if row["active"])
     if active:
         return f"X session ready: {active} active account(s) in the local pool."
     return (

@@ -32,6 +32,12 @@ semantic-ish versioning while in `0.x`.
 - `user_timeline(username, limit=40, include_replies=False)` tool: a user's
   recent posts as markdown, newest first, with an option to include replies.
 
+### Fixed
+- `auth_status` no longer reports a live BYO-cookie session as "No active X
+  session." It now counts `active` accounts (what the pool dispatches reads on),
+  instead of also requiring twscrape's `logged_in` flag, which cookie sessions
+  leave False.
+
 ### Dependencies
 - Bumped `twscrape` 0.19.1 to 0.19.2. X now serves anonymous web clients a build
   that omits the client-transaction-id signing assets, so 0.19.1 could no longer
