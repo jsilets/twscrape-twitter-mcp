@@ -38,7 +38,7 @@ classifiers = [
 # release. See CONTRIBUTING.md ("Bumping twscrape") for the ritual; Dependabot
 # opens the bump PRs automatically.
 dependencies = [
-  "twscrape==0.19.1",
+  "twscrape==0.19.2",
   "fastmcp>=3.4.2,<4",
   "uvicorn>=0.30",
   "websockets>=15",
