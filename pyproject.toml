@@ -38,7 +38,7 @@ classifiers = [
 # release. See CONTRIBUTING.md ("Bumping twscrape") for the ritual; Dependabot
 # opens the bump PRs automatically.
 dependencies = [
-  "twscrape==0.19.1",
+  "twscrape==0.19.2",
   "fastmcp>=3.4.2,<4",
   "uvicorn>=0.30",
   "websockets>=15",
@@ -73,3 +73,10 @@ asyncio_mode = "auto"
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
+# Pin the rule surface to ruff's historical default (pyflakes + pycodestyle
+# errors). Without this, an unpinned ruff bumps its default rule set from under
+# CI: 0.16.0 added bugbear/bandit/blind-except lints that flag the intentional
+# broad excepts (tools return markdown instead of raising).
+select = ["E4", "E7", "E9", "F"]

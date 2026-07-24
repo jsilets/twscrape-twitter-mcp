@@ -32,6 +32,12 @@ semantic-ish versioning while in `0.x`.
 - `user_timeline(username, limit=40, include_replies=False)` tool: a user's
   recent posts as markdown, newest first, with an option to include replies.
 
+### Dependencies
+- Bumped `twscrape` 0.19.1 to 0.19.2. X now serves anonymous web clients a build
+  that omits the client-transaction-id signing assets, so 0.19.1 could no longer
+  generate transaction ids and every read failed. 0.19.2 fetches those assets
+  with account cookies, which still return the assets the parser needs.
+
 ## [0.1.2]
 
 ### Changed
