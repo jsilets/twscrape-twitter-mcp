@@ -28,6 +28,8 @@ hosted **Streamable HTTP**.
 | `user_timeline(username, limit=40, include_replies=False)` | A user's recent posts, newest first. Set `include_replies=True` to include replies. |
 | `search(query, limit=20, product="Latest")` | Search results. Supports `from:`, `has:media`, `min_faves:`, etc. |
 | `user_profile(username)` | A user's profile as markdown: bio, location, follower/following/tweet counts, join date. |
+| `research_x_account(username, limit=40, include_replies=False)` | One research bundle containing an account profile and its recent posts, including media URLs. |
+| `research_ticker_posts(ticker, limit=40, product="Latest", include_retweets=False)` | Posts for an exact cashtag such as `$AAPL`, with retweets excluded by default and media URLs preserved. |
 
 ## Install
 

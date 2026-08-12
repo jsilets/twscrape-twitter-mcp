@@ -27,8 +27,10 @@ _READ_ONLY_EXTERNAL = {"readOnlyHint": True, "openWorldHint": True}
 _READ_ONLY_LOCAL = {"readOnlyHint": True, "openWorldHint": False}
 _TweetRef = Annotated[str, Field(min_length=1, max_length=2_048)]
 _Username = Annotated[str, Field(min_length=1, max_length=50)]
+_Ticker = Annotated[str, Field(min_length=1, max_length=16)]
 _Query = Annotated[str, Field(min_length=1, max_length=1_024)]
 _Limit = Annotated[int, Field(ge=1, le=100)]
+_TICKER_RE = re.compile(r"[A-Z0-9][A-Z0-9.-]{0,14}")
 
 
 def _guard(
@@ -69,6 +71,19 @@ def _normalize_handle(username: str) -> str:
     if not s:
         raise ValueError("username must not be blank")
     return s
+
+
+def _normalize_ticker(ticker: str) -> str:
+    """Normalize a ticker or cashtag without allowing search operators."""
+    symbol = (ticker or "").strip().upper()
+    if symbol.startswith("$"):
+        symbol = symbol[1:]
+    if not _TICKER_RE.fullmatch(symbol):
+        raise ValueError(
+            "ticker must contain 1-15 letters, numbers, dots, or hyphens "
+            "(for example AAPL, $MSFT, or BRK.B)"
+        )
+    return symbol
 
 
 def _parse_id(url_or_id: str) -> int:
@@ -117,6 +132,22 @@ def _conversation_id(tweet: Any, fallback: int) -> int:
             except (TypeError, ValueError):
                 pass
     return fallback
+
+
+async def _user_and_posts(
+    api: Any,
+    username: str,
+    limit: int,
+    include_replies: bool,
+) -> tuple[Any | None, list[Any]]:
+    """Resolve an account and collect its posts for timeline-style tools."""
+    handle = _normalize_handle(username)
+    user = await api.user_by_login(handle)
+    if not user:
+        return None, []
+    gen = api.user_tweets_and_replies if include_replies else api.user_tweets
+    posts = await gather(gen(user.id, limit=limit))
+    return user, _sorted_by_date(posts)[::-1]
 
 
 @mcp.tool(annotations=_READ_ONLY_LOCAL)
@@ -231,18 +262,78 @@ async def user_timeline(
     include the user's replies alongside their standalone posts.
     """
     api = get_api()
-    handle = _normalize_handle(username)
-    user = await api.user_by_login(handle)
+    user, res = await _user_and_posts(api, username, limit, include_replies)
     if not user:
         return (
             "User not found or not accessible (may be suspended, protected, or the "
             "session is rate-limited / logged out)."
         )
-    gen = api.user_tweets_and_replies if include_replies else api.user_tweets
-    res = await gather(gen(user.id, limit=limit))
     if not res:
         return "No posts found (or none accessible)."
-    return joined(_sorted_by_date(res)[::-1])
+    return joined(res)
+
+
+@mcp.tool(annotations=_READ_ONLY_EXTERNAL)
+@_guard
+async def research_x_account(
+    username: _Username,
+    limit: _Limit = settings.default_limit,
+    include_replies: bool = False,
+) -> str:
+    """Collect an X account profile and its recent posts in one research bundle.
+
+    Pass the handle with or without a leading @. Attached image, video, and GIF
+    URLs are preserved in the post output for multimodal follow-up.
+    """
+    api = get_api()
+    user, posts = await _user_and_posts(api, username, limit, include_replies)
+    if not user:
+        return (
+            "User not found or not accessible (may be suspended, protected, or the "
+            "session is rate-limited / logged out)."
+        )
+
+    handle = getattr(user, "username", None) or _normalize_handle(username)
+    blocks = [f"# X account research: @{handle}", "", "## Profile", "", user_to_md(user)]
+    if posts:
+        blocks += ["", f"## Recent posts ({len(posts)})", "", joined(posts)]
+    else:
+        blocks += ["", "## Recent posts (0)", "", "No posts found (or none accessible)."]
+    return "\n".join(blocks).strip()
+
+
+@mcp.tool(annotations=_READ_ONLY_EXTERNAL)
+@_guard
+async def research_ticker_posts(
+    ticker: _Ticker,
+    limit: _Limit = settings.default_limit,
+    product: Literal["Latest", "Top", "Media"] = "Latest",
+    include_retweets: bool = False,
+) -> str:
+    """Collect X posts for a ticker's cashtag as a research-ready source bundle.
+
+    Accepts a symbol with or without `$` and searches its exact cashtag. Retweets
+    are excluded by default. Attached media and external links remain in output.
+    """
+    symbol = _normalize_ticker(ticker)
+    query = f"${symbol}"
+    if not include_retweets:
+        query += " -is:retweet"
+
+    api = get_api()
+    posts = await gather(api.search(query, limit=limit, kv={"product": product}))
+    if not posts:
+        return f"No posts found for ${symbol}."
+
+    return "\n".join(
+        [
+            f"# X ticker research: ${symbol}",
+            "",
+            f"_Search: `{query}` · product: {product} · results: {len(posts)}_",
+            "",
+            joined(posts),
+        ]
+    ).strip()
 
 
 @mcp.tool(annotations=_READ_ONLY_EXTERNAL)

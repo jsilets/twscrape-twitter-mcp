@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [Unreleased]
+
+### Added
+- `research_x_account(username)`: combines an account profile and recent posts
+  into one research-ready Markdown bundle.
+- `research_ticker_posts(ticker)`: searches a normalized, injection-safe
+  cashtag and preserves post media URLs and source links.
+
 ## [0.1.3]
 
 ### Security
