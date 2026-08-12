@@ -12,15 +12,26 @@ server = pytest.importorskip("twscrape_twitter_mcp.server")
         ("https://twitter.com/foo/status/20?s=20", 20),
         ("20", 20),
         ("https://x.com/i/web/status/12345", 12345),
+        ("https://m.x.com/foo/status/35", 35),
+        ("https://mobile.twitter.com/foo/statuses/42/photo/1", 42),
     ],
 )
 def test_parse_id(value, expected):
     assert server._parse_id(value) == expected
 
 
-def test_parse_id_rejects_garbage():
+@pytest.mark.parametrize(
+    "value",
+    [
+        "https://x.com/markletree",
+        "https://example.com/status/12345",
+        "javascript://x.com/status/12345",
+        "0",
+    ],
+)
+def test_parse_id_rejects_invalid_references(value):
     with pytest.raises(ValueError):
-        server._parse_id("https://x.com/markletree")
+        server._parse_id(value)
 
 
 def test_conversation_id_prefers_root_id():
