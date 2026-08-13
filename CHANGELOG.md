@@ -4,6 +4,13 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [0.1.4]
+
+### Dependencies
+- Bumped `twscrape` 0.19.2 to 0.20.0. This brings current X GraphQL operation
+  IDs plus parser, pagination, cookie-session status, retry, and
+  client-transaction-id fixes.
+
 ## [0.1.3]
 
 ### Security
