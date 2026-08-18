@@ -14,6 +14,8 @@ server = pytest.importorskip("twscrape_twitter_mcp.server")
         ("https://x.com/i/web/status/12345", 12345),
         ("https://m.x.com/foo/status/35", 35),
         ("https://mobile.twitter.com/foo/statuses/42/photo/1", 42),
+        ("x.com/foo/status/55", 55),
+        ("twitter.com/foo/status/89?s=20", 89),
     ],
 )
 def test_parse_id(value, expected):

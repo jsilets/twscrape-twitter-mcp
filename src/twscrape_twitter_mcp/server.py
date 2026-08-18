@@ -89,8 +89,8 @@ def _parse_id(url_or_id: str) -> int:
         if tweet_id > 0:
             return tweet_id
 
-    parsed = urlsplit(s)
-    if parsed.scheme not in {"http", "https"} or parsed.hostname not in _TWEET_HOSTS:
+    parsed = urlsplit(s if "://" in s else f"//{s}")
+    if parsed.scheme not in {"", "http", "https"} or parsed.hostname not in _TWEET_HOSTS:
         raise ValueError(f"Could not parse a tweet id from: {url_or_id!r}")
 
     m = _ID_RE.search(parsed.path)
