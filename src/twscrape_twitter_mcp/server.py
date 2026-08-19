@@ -9,6 +9,7 @@ from __future__ import annotations
 import functools
 import re
 from typing import Annotated, Any, Awaitable, Callable, Literal
+from urllib.parse import urlsplit
 
 from fastmcp import FastMCP
 from fastmcp.tools.tool import ToolResult
@@ -22,7 +23,17 @@ from .pool import get_api, list_accounts
 
 mcp = FastMCP("twscrape-twitter-mcp", version=__version__, mask_error_details=True)
 
-_ID_RE = re.compile(r"(?:status(?:es)?/)(\d+)")
+_ID_RE = re.compile(r"/status(?:es)?/(\d+)(?:/|$)")
+_TWEET_HOSTS = {
+    "m.twitter.com",
+    "m.x.com",
+    "mobile.twitter.com",
+    "mobile.x.com",
+    "twitter.com",
+    "www.twitter.com",
+    "www.x.com",
+    "x.com",
+}
 _READ_ONLY_EXTERNAL = {"readOnlyHint": True, "openWorldHint": True}
 _READ_ONLY_LOCAL = {"readOnlyHint": True, "openWorldHint": False}
 _TweetRef = Annotated[str, Field(min_length=1, max_length=2_048)]
@@ -74,8 +85,15 @@ def _normalize_handle(username: str) -> str:
 def _parse_id(url_or_id: str) -> int:
     s = (url_or_id or "").strip()
     if s.isdigit():
-        return int(s)
-    m = _ID_RE.search(s)
+        tweet_id = int(s)
+        if tweet_id > 0:
+            return tweet_id
+
+    parsed = urlsplit(s if "://" in s else f"//{s}")
+    if parsed.scheme not in {"", "http", "https"} or parsed.hostname not in _TWEET_HOSTS:
+        raise ValueError(f"Could not parse a tweet id from: {url_or_id!r}")
+
+    m = _ID_RE.search(parsed.path)
     if not m:
         raise ValueError(f"Could not parse a tweet id from: {url_or_id!r}")
     return int(m.group(1))
