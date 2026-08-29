@@ -28,7 +28,10 @@ Tests are network-free. `twscrape-twitter-mcp smoke` does a live read (needs aut
 
 ## Bumping twscrape
 
-A stale pin is how scrapers rot, so this is the main maintenance job. Dependabot opens the PRs. For each one:
+A stale pin is how scrapers rot, so this is the main maintenance job. The `twscrape-watch`
+workflow checks PyPI daily and opens an issue when a new release lands. Dependabot does not
+do this: its pip ecosystem skips `[project]` dependencies and only bumps the `dev` extra.
+For each release:
 
 1. Read the [release notes](https://github.com/vladkens/twscrape/releases). A patch is low risk. A minor can change twscrape's Python API, so skim its "Breaking Changes" for anything `server.py` calls.
 2. Run `ruff check . && pytest -q && twscrape-twitter-mcp smoke`.

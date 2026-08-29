@@ -1,0 +1,49 @@
+name: twscrape-watch
+
+# The twscrape pin lives in [project] dependencies, which Dependabot's pip
+# ecosystem does not update: it only touches the [project.optional-dependencies]
+# dev extra. twscrape ships the X-compatibility fixes, so a missed release means
+# every read breaks. This job is the notification Dependabot never sends.
+
+on:
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare the pin against PyPI
+        id: check
+        run: python .github/scripts/check_twscrape_release.py >> "$GITHUB_OUTPUT"
+
+      - name: Open an issue for the new release
+        if: steps.check.outputs.outdated == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PINNED: ${{ steps.check.outputs.pinned }}
+          LATEST: ${{ steps.check.outputs.latest }}
+        run: |
+          title="Bump twscrape to $LATEST"
+          if gh issue list --state open --search "$title in:title" --json title \
+              --jq '.[].title' | grep -qxF "$title"; then
+            echo "Issue already open: $title"
+            exit 0
+          fi
+          {
+            echo "twscrape \`$LATEST\` is on PyPI. The pin in \`pyproject.toml\` is \`$PINNED\`."
+            echo
+            echo "Release notes: https://github.com/vladkens/twscrape/releases/tag/v$LATEST"
+            echo
+            echo 'Follow the "Bumping twscrape" section of CONTRIBUTING.md: read the notes,'
+            echo 'then run `ruff check . && pytest -q && twscrape-twitter-mcp smoke` against'
+            echo 'the new version before merging the pin.'
+          } > issue-body.md
+          gh issue create --title "$title" --label dependencies --body-file issue-body.md
