@@ -35,8 +35,10 @@ classifiers = [
 # twscrape is PINNED on purpose: it owns the brittle scraping layer
 # (GraphQL endpoints, x-client-transaction-id signing, TLS impersonation).
 # When X breaks it, bump this pin, run the unit tests + `smoke` locally, then
-# release. See CONTRIBUTING.md ("Bumping twscrape") for the ritual; Dependabot
-# opens the bump PRs automatically.
+# release. See CONTRIBUTING.md ("Bumping twscrape") for the ritual. Dependabot
+# does not watch this pin: its pip ecosystem skips [project] dependencies and
+# only updates the dev extra below. The twscrape-watch workflow files the issue
+# instead.
 dependencies = [
   "twscrape==0.20.1",
   "fastmcp>=3.4.2,<4",
