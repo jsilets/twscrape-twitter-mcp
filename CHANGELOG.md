@@ -4,6 +4,14 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [0.1.5]
+
+### Dependencies
+- Bumped `twscrape` 0.20.0 to 0.20.1. X changed its web build to 16-character
+  chunk hashes, which broke client-transaction-id generation and made every
+  read fail with `XClIdParseError`. The bump also restores user lookup by
+  numeric ID and refreshes GraphQL operation IDs.
+
 ## [0.1.4]
 
 ### Dependencies
