@@ -41,7 +41,7 @@ classifiers = [
 # instead.
 dependencies = [
   "twscrape==0.20.1",
-  "fastmcp>=3.4.2,<4",
+  "fastmcp>=3.4.2,<5",
   "uvicorn>=0.30",
   "websockets>=15",
   # Drives the browser-based login flow (Mac/Linux/Windows). Bundled Chromium is
