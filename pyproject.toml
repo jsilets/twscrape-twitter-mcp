@@ -52,7 +52,7 @@ dependencies = [
 [project.optional-dependencies]
 # Stealthier login (undetected Chromium), used automatically if installed.
 stealth = ["patchright>=1.45"]
-dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "ruff==0.16.4"]
+dev = ["pytest==9.1.1", "pytest-asyncio==1.4.0", "ruff==0.16.5"]
 
 [project.urls]
 Homepage = "https://github.com/jsilets/twscrape-twitter-mcp"
