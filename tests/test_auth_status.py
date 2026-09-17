@@ -4,9 +4,8 @@ gating on logged_in used to report a live session as "no session"."""
 
 import asyncio
 
-import pytest
 
-server = pytest.importorskip("twscrape_twitter_mcp.server")
+from twscrape_twitter_mcp import server
 
 # auth_status is wrapped by @mcp.tool/@_guard; reach the underlying coroutine.
 _auth_status = getattr(server.auth_status, "fn", server.auth_status)

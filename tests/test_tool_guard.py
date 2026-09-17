@@ -3,9 +3,8 @@
 import asyncio
 import inspect
 
-import pytest
 
-server = pytest.importorskip("twscrape_twitter_mcp.server")
+from twscrape_twitter_mcp import server
 
 
 def test_guard_passes_through_return_value():

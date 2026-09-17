@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format is loosely
 based on [Keep a Changelog](https://keepachangelog.com/), and the project follows
 semantic-ish versioning while in `0.x`.
 
+## [Unreleased]
+
+### Dependencies
+- Widened the `fastmcp` bound to `>=3.4.2,<5` and made the server import
+  `ToolResult` from `fastmcp.tools` instead of `fastmcp.tools.tool`. fastmcp 4
+  renamed that module to `fastmcp.tools.base`, so the old path stopped
+  resolving and the server failed to import. The package-level path works on
+  both 3.x and 4.x.
+
+### Fixed
+- The tests that import the server now import it directly instead of using
+  `pytest.importorskip`. The skip turned an import failure into four silently
+  skipped modules, so a broken server still produced a green test run.
+
 ## [0.1.5]
 
 ### Dependencies
