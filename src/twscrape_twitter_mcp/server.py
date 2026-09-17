@@ -12,7 +12,7 @@ from typing import Annotated, Any, Awaitable, Callable, Literal
 from urllib.parse import urlsplit
 
 from fastmcp import FastMCP
-from fastmcp.tools.tool import ToolResult
+from fastmcp.tools import ToolResult
 from pydantic import Field
 from twscrape import gather
 

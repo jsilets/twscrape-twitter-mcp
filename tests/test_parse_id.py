@@ -2,7 +2,7 @@
 
 import pytest
 
-server = pytest.importorskip("twscrape_twitter_mcp.server")
+from twscrape_twitter_mcp import server
 
 
 @pytest.mark.parametrize(
