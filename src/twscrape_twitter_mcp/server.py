@@ -282,4 +282,5 @@ async def search(
     res = await gather(api.search(query, limit=limit, kv={"product": product}))
     if not res:
         return "No results."
-    return joined(res)
+    # twscrape can yield a full page beyond limit; enforce the tool's output cap.
+    return joined(res[:limit])
