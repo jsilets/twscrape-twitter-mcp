@@ -16,7 +16,7 @@ from fastmcp.tools import ToolResult
 from pydantic import Field
 from twscrape import gather
 
-from . import __version__
+from . import __version__, articles
 from .config import settings
 from .formatters import joined, thread_to_md, tweet_to_md, user_to_md
 from .pool import get_api, list_accounts
@@ -160,13 +160,13 @@ async def auth_status() -> str:
 async def read_tweet(url_or_id: _TweetRef) -> str:
     """Read a single X post by URL or numeric id. Returns clean markdown."""
     api = get_api()
-    t = await api.tweet_details(_parse_id(url_or_id))
+    t, article = await articles.tweet_details(api, _parse_id(url_or_id))
     if not t:
         return (
             "Tweet not found or not accessible. It may be deleted, protected, or "
             "the session is rate-limited / logged out. Try `twscrape-twitter-mcp accounts` to check."
         )
-    return tweet_to_md(t)
+    return tweet_to_md(t, article=article)
 
 
 @mcp.tool(annotations=_READ_ONLY_EXTERNAL)
@@ -198,16 +198,18 @@ async def read_thread(
     and top replies. Pass any tweet in the thread."""
     api = get_api()
     tid = _parse_id(url_or_id)
-    root = await api.tweet_details(tid)
+    root, article = await articles.tweet_details(api, tid)
     if not root:
         return "Tweet not found or not accessible."
     conversation_id = _conversation_id(root, tid)
     if conversation_id != tid:
-        root = await api.tweet_details(conversation_id) or root
+        parent, parent_article = await articles.tweet_details(api, conversation_id)
+        if parent:
+            root, article = parent, parent_article
     replies: list[Any] = []
     if include_replies:
         replies = await _conversation(api, conversation_id, max_replies)
-    return thread_to_md(root, replies)
+    return thread_to_md(root, replies, root_article=article)
 
 
 @mcp.tool(annotations=_READ_ONLY_EXTERNAL)

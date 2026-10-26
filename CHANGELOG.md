@@ -6,6 +6,14 @@ semantic-ish versioning while in `0.x`.
 
 ## [Unreleased]
 
+### Added
+- `read_tweet` and `read_thread` now return the body of an X Article: the
+  title, cover image, text with bold and links, lists, and inline media. Before
+  this, an Article post returned only its t.co link. X sends the body only when
+  TweetDetail sets the `withArticleRichContentState` field toggle, and twscrape
+  0.20.1 does not send it. `articles.py` sends the request with the toggle
+  until the twscrape pin includes vladkens/twscrape#323.
+
 ### Dependencies
 - Widened the `fastmcp` bound to `>=3.4.2,<5` and made the server import
   `ToolResult` from `fastmcp.tools` instead of `fastmcp.tools.tool`. fastmcp 4
