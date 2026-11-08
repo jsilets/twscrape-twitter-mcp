@@ -47,3 +47,27 @@ def test_guard_preserves_name_and_signature():
     assert sample.__name__ == "sample"
     params = list(inspect.signature(sample).parameters)
     assert params == ["url_or_id", "limit"]
+
+
+def test_guard_reports_twscrape_parse_error():
+    from twscrape import ParseError
+
+    @server._guard
+    async def boom():
+        raise ParseError("Failed to parse tweet 1")
+
+    out = asyncio.run(boom())
+    assert out.is_error is True
+    assert "could not parse" in out.content[0].text
+
+
+def test_guard_reports_cloudflare_challenge():
+    from twscrape import XClIdParseError
+
+    @server._guard
+    async def boom():
+        raise XClIdParseError("challenge")
+
+    out = asyncio.run(boom())
+    assert out.is_error is True
+    assert "Cloudflare challenge" in out.content[0].text

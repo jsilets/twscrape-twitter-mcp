@@ -1,6 +1,6 @@
 [project]
 name = "twscrape-twitter-mcp"
-version = "0.1.5"
+version = "0.1.6"
 description = "Read-optimized MCP server for Twitter/X, wrapping twscrape. BYO cookies, multi-account pool, agent-friendly tools."
 readme = "README.md"
 license = { text = "MIT" }
@@ -40,7 +40,7 @@ classifiers = [
 # only updates the dev extra below. The twscrape-watch workflow files the issue
 # instead.
 dependencies = [
-  "twscrape==0.20.1",
+  "twscrape==0.21.0",
   "fastmcp>=3.4.2,<5",
   "uvicorn>=0.30",
   "websockets>=15",

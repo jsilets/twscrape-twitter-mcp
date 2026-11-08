@@ -8,6 +8,7 @@ change upstream degrades gracefully instead of crashing.
 
 from __future__ import annotations
 
+from dataclasses import asdict, is_dataclass
 from datetime import timezone
 from typing import Any, Iterable
 from urllib.parse import urlparse
@@ -73,6 +74,12 @@ def _best_variant_url(video: Any) -> str:
     return best or fallback
 
 
+def _alt(m: Any) -> str:
+    """Return ' (alt text: ...)' for media that has alt text, else ''."""
+    alt = " ".join((getattr(m, "altText", None) or "").split())
+    return f" (alt text: {alt})" if alt else ""
+
+
 def _media_lines(t: Any) -> list[str]:
     media = getattr(t, "media", None)
     if not media:
@@ -81,18 +88,18 @@ def _media_lines(t: Any) -> list[str]:
     for photo in getattr(media, "photos", None) or []:
         url = getattr(photo, "url", None)
         if url:
-            bullets.append(f"- Image: {url}")
+            bullets.append(f"- Image: {url}{_alt(photo)}")
     for video in getattr(media, "videos", None) or []:
         url = _best_variant_url(video)
         if not url:
             continue
         dur = _humanize_ms(getattr(video, "duration", None))
         label = f"Video ({dur})" if dur else "Video"
-        bullets.append(f"- {label}: {url}")
+        bullets.append(f"- {label}: {url}{_alt(video)}")
     for gif in getattr(media, "animated", None) or []:
         url = getattr(gif, "videoUrl", None)
         if url:
-            bullets.append(f"- GIF: {url}")
+            bullets.append(f"- GIF: {url}{_alt(gif)}")
     if not bullets:
         return []
     return ["", "**Media:**", *bullets]
@@ -197,10 +204,12 @@ def _inline_md(block: dict, entities: dict[str, dict]) -> str:
     return "".join(_wrap(seg, *attrs) for seg, attrs in runs)
 
 
-def _article_media(article: dict) -> dict[str, str]:
+def _article_media(media_entities: Iterable[Any]) -> dict[str, str]:
     """Map media_id -> markdown bullet for the Article's inline media."""
     out: dict[str, str] = {}
-    for m in article.get("media_entities") or []:
+    for m in media_entities or []:
+        if not isinstance(m, dict):
+            continue
         info = m.get("media_info") or {}
         mid = str(m.get("media_id") or "")
         if not mid:
@@ -252,26 +261,34 @@ _BLOCK_PREFIX = {
 _LIST_TYPES = ("unordered-list-item", "ordered-list-item")
 
 
-def article_to_md(article: Any) -> str:
-    """Render an X Article (raw `article_results.result` dict) as markdown.
+def _as_dict(obj: Any) -> dict:
+    """Return a twscrape dataclass as a plain dict, so a dict also works."""
+    if is_dataclass(obj) and not isinstance(obj, type):
+        return asdict(obj)
+    return obj if isinstance(obj, dict) else {}
 
-    Uses the rich `content_state` blocks when present, then `plain_text`, then
-    the short `preview_text` X sends when the field toggles are missing.
+
+def article_to_md(article: Any) -> str:
+    """Render an X Article (twscrape `tweet.article`) as markdown.
+
+    Uses the rich `contentState` blocks when present, else the short
+    `previewText` that X sends when the body is missing.
     """
-    if not isinstance(article, dict):
+    if not article:
         return ""
-    title = (article.get("title") or "").strip()
+    title = (getattr(article, "title", None) or "").strip()
     out: list[str] = [f"## {title}" if title else "## Article"]
 
-    cover = ((article.get("cover_media") or {}).get("media_info") or {}).get("original_img_url")
+    cover_info = getattr(getattr(article, "coverMedia", None), "mediaInfo", None) or {}
+    cover = cover_info.get("original_img_url") if isinstance(cover_info, dict) else None
     if cover:
         out += ["", f"Cover image: {cover}"]
 
-    content_state = article.get("content_state") or {}
+    content_state = _as_dict(getattr(article, "contentState", None))
     blocks = content_state.get("blocks") or []
     if blocks:
         entities = _entity_map(content_state)
-        media = _article_media(article)
+        media = _article_media(getattr(article, "mediaEntities", None))
         body = ""
         prev_type = None
         for block in blocks:
@@ -290,19 +307,15 @@ def article_to_md(article: Any) -> str:
             prev_type = btype
         out += ["", body]
     else:
-        text = (article.get("plain_text") or "").strip()
-        if text:
-            out += ["", text]
-        else:
-            preview = (article.get("preview_text") or "").strip()
-            if preview:
-                out += ["", preview, "", "_Preview only: X did not return the article body._"]
+        preview = (getattr(article, "previewText", None) or "").strip()
+        if preview:
+            out += ["", preview, "", "_Preview only: X did not return the article body._"]
 
     return "\n".join(out).strip()
 
 
-def tweet_to_md(t: Any, *, heading_level: int = 0, article: Any = None) -> str:
-    """Render one tweet as a markdown block, with its X Article body when given."""
+def tweet_to_md(t: Any, *, heading_level: int = 0) -> str:
+    """Render one tweet as a markdown block, with its X Article body if it has one."""
     user = getattr(t, "user", None)
     handle = getattr(user, "username", None) or "unknown"
     name = getattr(user, "displayname", None) or handle
@@ -316,6 +329,7 @@ def tweet_to_md(t: Any, *, heading_level: int = 0, article: Any = None) -> str:
         byline += f" · {date}"
 
     lines = [byline, "", text.strip()]
+    article = getattr(t, "article", None)
     if article:
         lines += ["", article_to_md(article)]
     lines += _media_lines(t)
@@ -325,6 +339,9 @@ def tweet_to_md(t: Any, *, heading_level: int = 0, article: Any = None) -> str:
     if quoted:
         q = tweet_to_md(quoted)
         lines += ["", "> " + q.replace("\n", "\n> ")]
+    elif getattr(t, "quotedTweetIdStr", None):
+        # twscrape sets the id even when X does not return the quoted post.
+        lines += ["", f"> Quoted post (unavailable): https://x.com/i/status/{t.quotedTweetIdStr}"]
 
     meta = " · ".join(x for x in (_stats(t), url) if x)
     if meta:
@@ -383,7 +400,7 @@ def user_to_md(u: Any) -> str:
     return "\n".join(lines).strip()
 
 
-def thread_to_md(root: Any, replies: Iterable[Any], *, root_article: Any = None) -> str:
+def thread_to_md(root: Any, replies: Iterable[Any]) -> str:
     """Render a conversation: root post, the author's self-thread, then replies."""
     replies = list(replies or [])
     root_author = _handle(root)
@@ -397,7 +414,7 @@ def thread_to_md(root: Any, replies: Iterable[Any], *, root_article: Any = None)
     ]
     others = [r for r in replies if r not in self_thread]
 
-    out = ["## Thread", "", tweet_to_md(root, article=root_article)]
+    out = ["## Thread", "", tweet_to_md(root)]
 
     if self_thread:
         out += ["", "### Continued by author"]

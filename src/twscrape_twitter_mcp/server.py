@@ -14,9 +14,9 @@ from urllib.parse import urlsplit
 from fastmcp import FastMCP
 from fastmcp.tools import ToolResult
 from pydantic import Field
-from twscrape import gather
+from twscrape import ParseError, XClIdParseError, gather
 
-from . import __version__, articles
+from . import __version__
 from .config import settings
 from .formatters import joined, thread_to_md, tweet_to_md, user_to_md
 from .pool import get_api, list_accounts
@@ -49,8 +49,11 @@ def _guard(
 
     twscrape raises on operational failures (no account available, rate-limit,
     expired session, network), and bad input raises ValueError from `_parse_id`.
-    A raised exception would reach the agent as an opaque error, so every tool
-    funnels through here and returns readable markdown with `isError` set.
+    Since twscrape 0.21.0 it also raises ParseError when X returns an object it
+    cannot parse, and XClIdParseError on a Cloudflare challenge page, where older
+    releases returned None. A raised exception would reach the agent as an opaque
+    error, so every tool funnels through here and returns readable markdown with
+    `isError` set.
     """
 
     @functools.wraps(fn)
@@ -59,6 +62,22 @@ def _guard(
             return await fn(*args, **kwargs)
         except ValueError as e:
             return ToolResult(content=f"Invalid input: {e}", is_error=True)
+        except ParseError:
+            return ToolResult(
+                content=(
+                    "X returned data that twscrape could not parse. X may have changed its "
+                    "response format; a newer twscrape release may be needed."
+                ),
+                is_error=True,
+            )
+        except XClIdParseError:
+            return ToolResult(
+                content=(
+                    "X served a Cloudflare challenge page instead of data. Retry later, "
+                    "or use a different network or proxy."
+                ),
+                is_error=True,
+            )
         except Exception:
             return ToolResult(
                 content=(
@@ -160,13 +179,13 @@ async def auth_status() -> str:
 async def read_tweet(url_or_id: _TweetRef) -> str:
     """Read a single X post by URL or numeric id. Returns clean markdown."""
     api = get_api()
-    t, article = await articles.tweet_details(api, _parse_id(url_or_id))
+    t = await api.tweet_details(_parse_id(url_or_id))
     if not t:
         return (
             "Tweet not found or not accessible. It may be deleted, protected, or "
             "the session is rate-limited / logged out. Try `twscrape-twitter-mcp accounts` to check."
         )
-    return tweet_to_md(t, article=article)
+    return tweet_to_md(t)
 
 
 @mcp.tool(annotations=_READ_ONLY_EXTERNAL)
@@ -198,18 +217,18 @@ async def read_thread(
     and top replies. Pass any tweet in the thread."""
     api = get_api()
     tid = _parse_id(url_or_id)
-    root, article = await articles.tweet_details(api, tid)
+    root = await api.tweet_details(tid)
     if not root:
         return "Tweet not found or not accessible."
     conversation_id = _conversation_id(root, tid)
     if conversation_id != tid:
-        parent, parent_article = await articles.tweet_details(api, conversation_id)
+        parent = await api.tweet_details(conversation_id)
         if parent:
-            root, article = parent, parent_article
+            root = parent
     replies: list[Any] = []
     if include_replies:
         replies = await _conversation(api, conversation_id, max_replies)
-    return thread_to_md(root, replies, root_article=article)
+    return thread_to_md(root, replies)
 
 
 @mcp.tool(annotations=_READ_ONLY_EXTERNAL)
