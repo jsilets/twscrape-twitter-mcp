@@ -6,15 +6,28 @@ semantic-ish versioning while in `0.x`.
 
 ## [Unreleased]
 
+## [0.1.6]
+
 ### Added
 - `read_tweet` and `read_thread` now return the body of an X Article: the
   title, cover image, text with bold and links, lists, and inline media. Before
-  this, an Article post returned only its t.co link. X sends the body only when
-  TweetDetail sets the `withArticleRichContentState` field toggle, and twscrape
-  0.20.1 does not send it. `articles.py` sends the request with the toggle
-  until the twscrape pin includes vladkens/twscrape#323.
+  this, an Article post returned only its t.co link. twscrape 0.21.0 sends the
+  TweetDetail field toggles that make X return the body, and parses it into
+  `tweet.article` (vladkens/twscrape#323). The formatter renders that object.
+- Images, videos, and GIFs now show their alt text when the post has it.
+- A post that quotes an unavailable post now links the quoted post id. Before
+  this, the quote disappeared from the output.
+- Tools now return a specific error when X sends data that twscrape cannot
+  parse, and when X serves a Cloudflare challenge page. twscrape 0.21.0 raises
+  `ParseError` and `XClIdParseError` for these cases, where 0.20.1 returned
+  `None`.
 
 ### Dependencies
+- Bumped `twscrape` 0.20.1 to 0.21.0. It adds Article parsing and makes
+  curl-cffi the default HTTP backend. It also moves to the next account on a
+  rate limit or a suspended account, and fixes dropped tweets from authors
+  without a full profile. `twscrape-twitter-mcp` no longer needs its own
+  TweetDetail request, so `articles.py` is removed.
 - Widened the `fastmcp` bound to `>=3.4.2,<5` and made the server import
   `ToolResult` from `fastmcp.tools` instead of `fastmcp.tools.tool`. fastmcp 4
   renamed that module to `fastmcp.tools.base`, so the old path stopped
@@ -22,6 +35,8 @@ semantic-ish versioning while in `0.x`.
   both 3.x and 4.x.
 
 ### Fixed
+- `server.json` and `__version__` now match the package version. They still
+  said 0.1.4 and 0.1.3.
 - The tests that import the server now import it directly instead of using
   `pytest.importorskip`. The skip turned an import failure into four silently
   skipped modules, so a broken server still produced a green test run.

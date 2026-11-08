@@ -162,3 +162,16 @@ def test_no_media_or_links_output_unchanged():
     md = tweet_to_md(_tweet(1, "alice", "plain tweet", likeCount=5))
     assert "**Media:**" not in md
     assert "**Links:**" not in md
+
+
+def test_tweet_to_md_shows_media_alt_text():
+    photo = SimpleNamespace(url="https://pbs.twimg.com/media/a.jpg", altText="A red\n  bike")
+    md = tweet_to_md(_tweet(1, "alice", "pic", media=SimpleNamespace(photos=[photo])))
+    assert "- Image: https://pbs.twimg.com/media/a.jpg (alt text: A red bike)" in md
+
+
+def test_tweet_to_md_links_an_unavailable_quoted_post():
+    t = _tweet(1, "alice", "look")
+    t.quotedTweetIdStr = "42"
+    md = tweet_to_md(t)
+    assert "> Quoted post (unavailable): https://x.com/i/status/42" in md
